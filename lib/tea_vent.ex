@@ -82,12 +82,11 @@ defmodule TeaVent do
   @type middleware_function ::
           (middleware_function -> (Event.t() -> {:ok, Event.t()} | {:error, any()}))
 
-  @type configuration :: %{
-          reducer: reducer(),
-          optional(:middleware) => [middleware_function],
-          optional(:sync_callbacks) => [sync_callback],
-          optional(context_provider) => [context_provider]
-        }
+  # @type configuration :: %{reducer: reducer(),
+  #         optional(:middleware) => [middleware_function()],
+  #         optional(:sync_callbacks) => [sync_callback()],
+  #         optional(:context_provider) => [context_provider()]
+  #       }
 
   defmodule Event do
     @moduledoc """
