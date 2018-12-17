@@ -84,9 +84,9 @@ defmodule TeaVent do
 
   @type configuration :: %{
           reducer: reducer(),
-          middleware: [middleware_function],
-          sync_callbacks: [sync_callback],
-          context_provider: [context_provider]
+          optional(:middleware) => [middleware_function],
+          optional(:sync_callbacks) => [sync_callback],
+          optional(context_provider) => [context_provider]
         }
 
   defmodule Event do
