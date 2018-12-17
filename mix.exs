@@ -10,7 +10,7 @@ defmodule TeaVent.MixProject do
       version: @version,
       elixir: "~> 1.7",
       start_permanent: Mix.env() == :prod,
-      deps: deps()
+      deps: deps(),
 
       package: package(),
       description: description(),
