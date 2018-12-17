@@ -82,14 +82,19 @@ defmodule TeaVent.Example do
       %__MODULE__{id: Enum.random(1..10_000_000_000_000_000_000), name: name}
     end
   end
+
   alias __MODULE__.User
 
-  def dispatch(topic, name, data  \\ %{}, state \\ %{users: %{1 => User.new("Jose")}, events: []}) do
+  def dispatch(topic, name, data \\ %{}, state \\ %{users: %{1 => User.new("Jose")}, events: []}) do
     dispatch_event(TeaVent.Event.new(topic, name, data), state)
   end
 
   def dispatch_event(event, state \\ %{users: %{1 => User.new("Jose")}, events: []}) do
-    TeaVent.dispatch_event(event, reducer: &reduce/2, context_provider: injected_context_provider(state))
+    TeaVent.dispatch_event(event,
+      reducer: &reduce/2,
+      context_provider: injected_context_provider(state)
+    )
+
     receive do
       new_state -> new_state
     end
@@ -108,31 +113,45 @@ defmodule TeaVent.Example do
       %Event{topic: [:users]}, reducer ->
         case reducer.(nil) do
           {:ok, event = %Event{changed_subject: created_user}} ->
-            new_state = %{injected_state | users: users |> Map.put(created_user.id, created_user), events: [event | events]}
+            new_state = %{
+              injected_state
+              | users: users |> Map.put(created_user.id, created_user),
+                events: [event | events]
+            }
+
             send_state_to_self(new_state)
             {:ok, event}
-          error -> error
+
+          error ->
+            error
         end
 
       %Event{topic: [:users, id]}, reducer ->
         result =
           users
           |> Map.get(id, {:error, :not_found})
-          |> IO.inspect
+          |> IO.inspect()
           |> reducer.()
-      case result do
-        {:ok, event = %Event{changed_subject: updated_user}} ->
-          new_state = %{injected_state | users: users |> Map.put(id, updated_user), events: [event | events]}
-          send_state_to_self(new_state)
-          {:ok, event}
-        error -> error
-      end
 
+        case result do
+          {:ok, event = %Event{changed_subject: updated_user}} ->
+            new_state = %{
+              injected_state
+              | users: users |> Map.put(id, updated_user),
+                events: [event | events]
+            }
+
+            send_state_to_self(new_state)
+            {:ok, event}
+
+          error ->
+            error
+        end
     end
   end
 
   defp send_state_to_self(state) do
     IO.inspect(state)
-    send self(), state
+    send(self(), state)
   end
 end

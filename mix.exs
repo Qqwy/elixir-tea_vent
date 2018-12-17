@@ -11,7 +11,6 @@ defmodule TeaVent.MixProject do
       elixir: "~> 1.7",
       start_permanent: Mix.env() == :prod,
       deps: deps(),
-
       package: package(),
       description: description(),
       source_url: @repo_url,
@@ -22,7 +21,7 @@ defmodule TeaVent.MixProject do
         source_ref: "v#{@version}",
         main: "TeaVent",
         source_url: @repo_url
-      ],
+      ]
     ]
   end
 
@@ -40,10 +39,9 @@ defmodule TeaVent.MixProject do
       # {:dep_from_git, git: "https://github.com/elixir-lang/my_dep.git", tag: "0.1.0"},
       {:dialyxir, "~> 1.0.0-rc.4", only: [:dev], runtime: false},
       {:credo, "~> 1.0.0", only: [:dev, :test], runtime: false},
-      {:ex_doc, ">= 0.0.0", only: :dev},
+      {:ex_doc, ">= 0.0.0", only: :dev}
     ]
   end
-
 
   defp package() do
     [

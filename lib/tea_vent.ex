@@ -65,27 +65,29 @@ defmodule TeaVent do
   # @keys [:middleware, :sync_callbacks, :subject_finder, :subject_putter]
   @configuration_keys [:middleware, :sync_callbacks, :context_provider, :reducer]
 
-  @configuration_defaults %{middleware: [],
-              sync_callbacks: [],
-              context_provider: &__MODULE__.Defaults.context_provider/2
-              # context_provider: fn _, reducer -> reducer.({:ok, nil}) end
-              # subject_finder: fn _ -> nil end,
-              # subject_putter: fn _, _, _ -> :ok end
+  @configuration_defaults %{
+    middleware: [],
+    sync_callbacks: [],
+    context_provider: &__MODULE__.Defaults.context_provider/2
+    # context_provider: fn _, reducer -> reducer.({:ok, nil}) end
+    # subject_finder: fn _ -> nil end,
+    # subject_putter: fn _, _, _ -> :ok end
   }
 
-  @type reducer(data_model) :: (data_model, Event.t -> ({:ok, data_model} | {:error, any()}))
+  @type reducer(data_model) :: (data_model, Event.t() -> {:ok, data_model} | {:error, any()})
   @type reducer() :: reducer(any)
 
-  @type context_provider() :: (Event.t, reducer() -> ({:ok, Event.t} | {:error, any()}))
-  @type sync_callback :: (Event.t -> ({:ok, Event.t} | {:error, any()}))
-  @type middleware_function :: (middleware_function -> (Event.t -> {:ok, Event.t} | {:error, any()}))
+  @type context_provider() :: (Event.t(), reducer() -> {:ok, Event.t()} | {:error, any()})
+  @type sync_callback :: (Event.t() -> {:ok, Event.t()} | {:error, any()})
+  @type middleware_function ::
+          (middleware_function -> (Event.t() -> {:ok, Event.t()} | {:error, any()}))
 
   @type configuration :: %{
-    reducer: reducer(),
-    middleware: [middleware_function],
-    sync_callbacks: [sync_callback],
-    context_provider: [context_provider]
-  }
+          reducer: reducer(),
+          middleware: [middleware_function],
+          sync_callbacks: [sync_callback],
+          context_provider: [context_provider]
+        }
 
   defmodule Event do
     @moduledoc """
@@ -104,7 +106,15 @@ defmodule TeaVent do
     """
     @enforce_keys [:topic, :name]
     defstruct [:topic, :name, :data, :subject, :changed_subject, :changes, meta: %{}]
-    @type t :: %__MODULE__{topic: any(), name: binary() | atom(), meta: map(), subject: any(), changed_subject: any(), changes: map()}
+
+    @type t :: %__MODULE__{
+            topic: any(),
+            name: binary() | atom(),
+            meta: map(),
+            subject: any(),
+            changed_subject: any(),
+            changes: map()
+          }
 
     def new(topic, name, data \\ %{}, meta \\ %{}) do
       %__MODULE__{topic: topic, name: name, data: data, meta: meta}
@@ -119,7 +129,9 @@ defmodule TeaVent do
 
     @impl true
     def exception(value) do
-      msg = "The configuration require #{inspect value} to be specified (as part of the configuration parameter or in the Application.env), but it was not."
+      msg =
+        "The configuration require #{inspect(value)} to be specified (as part of the configuration parameter or in the Application.env), but it was not."
+
       %__MODULE__{message: msg}
     end
   end
@@ -132,7 +144,9 @@ defmodule TeaVent do
 
     @impl true
     def exception(keys) do
-      msg = "The keys `#{inspect keys}` are not part of the configuration and could not be recognized. Did you make a syntax-error somewhere?"
+      msg =
+        "The keys `#{inspect(keys)}` are not part of the configuration and could not be recognized. Did you make a syntax-error somewhere?"
+
       %__MODULE__{message: msg}
     end
   end
@@ -180,11 +194,14 @@ defmodule TeaVent do
     sync_callbacks = configuration[:sync_callbacks]
 
     sync_chain = fn event ->
-      chain_until_failure(event,
+      chain_until_failure(
+        event,
         [
           core_function(context_provider, reducer)
-        ] ++ sync_callbacks)
+        ] ++ sync_callbacks
+      )
     end
+
     run_middleware(event, sync_chain, middleware)
   end
 
@@ -192,11 +209,17 @@ defmodule TeaVent do
     fn event ->
       context_provider.(event, fn subject ->
         with {:ok, changed_subject} <- reducer.(subject, event),
-        changes = calc_diff(subject, changed_subject) do
-          {:ok, %__MODULE__.Event{event | subject: subject, changed_subject: changed_subject, changes: changes}}
+             changes = calc_diff(subject, changed_subject) do
+          {:ok,
+           %__MODULE__.Event{
+             event
+             | subject: subject,
+               changed_subject: changed_subject,
+               changes: changes
+           }}
         else
           {:error, error} ->
-          {:error, error}
+            {:error, error}
         end
       end)
     end
@@ -205,9 +228,10 @@ defmodule TeaVent do
   defp calc_diff(a = %struct_a{}, b = %struct_b{}) when struct_a == struct_b do
     calc_diff(Map.from_struct(a), Map.from_struct(b))
   end
+
   defp calc_diff(a = %{}, b = %{}) do
-    a_set = a |> MapSet.new
-    b_set = b |> MapSet.new
+    a_set = a |> MapSet.new()
+    b_set = b |> MapSet.new()
 
     b_set
     |> MapSet.difference(a_set)
@@ -227,6 +251,7 @@ defmodule TeaVent do
 
   # Chains the given list of functions until any one of them returns a failure result.
   defp chain_until_failure(event, []), do: {:ok, event}
+
   defp chain_until_failure(event, [callback | callbacks]) do
     case callback.(event) do
       {:error, error} -> {:error, error, event}
@@ -234,16 +259,17 @@ defmodule TeaVent do
     end
   end
 
-
   defp parse_configuration(configuration) do
     configuration_map = Enum.into(configuration, %{})
-    configuration_map_keys = configuration_map |> Map.keys |> MapSet.new
-    allowed_keys = @configuration_keys |> MapSet.new
+    configuration_map_keys = configuration_map |> Map.keys() |> MapSet.new()
+    allowed_keys = @configuration_keys |> MapSet.new()
     unrecognized_keys = MapSet.difference(configuration_map_keys, allowed_keys)
-    case unrecognized_keys |> MapSet.to_list do
+
+    case unrecognized_keys |> MapSet.to_list() do
       [] -> :ok
       keys -> raise __MODULE__.Errors.UnrecognizedConfiguration, keys
     end
+
     # TODO
     @configuration_keys
     |> Enum.map(fn key ->

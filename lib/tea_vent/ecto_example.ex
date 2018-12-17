@@ -6,13 +6,16 @@ defmodule TeaVent.EctoExample do
     TeaVent.dispatch(event, reducer: reducer, context_provider: &context_provider/2)
   end
 
-  def context_provider(event = %Event{topic: [schema, id]}, reducer) when is_atom(schema) and is_integer(id) do
+  def context_provider(event = %Event{topic: [schema, id]}, reducer)
+      when is_atom(schema) and is_integer(id) do
     struct = schema |> fetch(id)
+
     case reducer.(struct) do
       {:ok, event = %Event{changes: changes}} ->
         struct
         |> Ecto.Changeset.change(changes)
-        |> Repo.update
+        |> Repo.update()
+
       error ->
         error
     end
@@ -20,16 +23,17 @@ defmodule TeaVent.EctoExample do
 
   def context_provider(event = %Event{topic: [schema | clauses]}, reducer) when is_atom(schema) do
     struct = schema |> fetch_by(clauses)
+
     case reducer.(struct) do
       {:ok, event = %Event{changes: changes}} ->
         struct
         |> Ecto.Changeset.change(changes)
-        |> Repo.update
+        |> Repo.update()
+
       error ->
         error
     end
   end
-
 
   defp fetch(queryable, id) do
     case Repo.get(queryable, id) do
