@@ -110,8 +110,8 @@ defmodule TeaVent.Example do
 
   def injected_context_provider(injected_state = %{users: users, events: events}) do
     fn
-      %Event{topic: [:users]}, reducer ->
-        case reducer.(nil) do
+      event = %Event{topic: [:users]}, reducer ->
+        case reducer.(nil, event) do
           {:ok, event = %Event{changed_subject: created_user}} ->
             new_state = %{
               injected_state

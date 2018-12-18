@@ -206,7 +206,7 @@ defmodule TeaVent do
 
   defp core_function(context_provider, reducer) do
     fn event ->
-      context_provider.(event, fn subject ->
+      context_provider.(event, fn subject, event ->
         with {:ok, changed_subject} <- reducer.(subject, event),
              changes = calc_diff(subject, changed_subject) do
           {:ok,

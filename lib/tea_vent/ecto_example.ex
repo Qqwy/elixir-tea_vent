@@ -24,7 +24,7 @@ defmodule TeaVent.EctoExample do
   def context_provider(event = %Event{topic: [schema | clauses]}, reducer) when is_atom(schema) do
     struct = schema |> fetch_by(clauses)
 
-    case reducer.(struct) do
+    case reducer.(struct, event) do
       {:ok, event = %Event{changes: changes}} ->
         struct
         |> Ecto.Changeset.change(changes)
